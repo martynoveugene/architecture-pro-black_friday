@@ -1,4 +1,4 @@
-name: mongo-sharding-repl
+name: sharding-repl-cache
 
 services:
 
@@ -14,6 +14,7 @@ services:
     environment:
       MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://<redis-service-name>:6379"
     networks:
       - app-network
 

@@ -6,9 +6,9 @@
 
 TOTAL=$(docker compose exec -T mongos_router mongosh --port 27020 --quiet --eval "db.getSiblingDB('somedb').helloDoc.countDocuments()" | tr -d '\r')
 
-SHARD1=$(docker compose exec -T shard1-1 mongosh --port 27011 --quiet --eval "db.getSiblingDB('somedb').helloDoc.countDocuments()" | tr -d '\r')
+SHARD1=$(docker compose exec -T shard1 mongosh --port 27018 --quiet --eval "db.getSiblingDB('somedb').helloDoc.countDocuments()" | tr -d '\r')
 
-SHARD2=$(docker compose exec -T shard2-1 mongosh --port 27021 --quiet --eval "db.getSiblingDB('somedb').helloDoc.countDocuments()" | tr -d '\r')
+SHARD2=$(docker compose exec -T shard2 mongosh --port 27019 --quiet --eval "db.getSiblingDB('somedb').helloDoc.countDocuments()" | tr -d '\r')
 
 SHARDS_SUM=$((SHARD1 + SHARD2))
 

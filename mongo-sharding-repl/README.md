@@ -2,7 +2,7 @@
 
 ## Как запустить
 
-Запускаем компоненты mongodb и приложение
+Запускаем компоненты mongodb и приложение, mongos_router будет unhealthy
 
 ```shell
 docker compose up -d
@@ -22,7 +22,8 @@ docker compose up -d
 
 Добавляем на роутер mongodb все шарды, 
 помечаем базу somedb для шардирования, 
-шардируем коллекцию helloDoc по полю name хэшированным способом
+шардируем коллекцию helloDoc по полю name хэшированным способом,
+mongos_router должен стать healthy
 
 ```shell
 ./scripts/mongo-init-router.sh

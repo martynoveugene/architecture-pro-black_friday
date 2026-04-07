@@ -8,10 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      - configSrv
       - mongos_router
-      - shard1
-      - shard2
     ports:
       - 8080:8080
     environment:
@@ -41,7 +38,7 @@ services:
         "27017"
       ]
     healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      test: [ "CMD", "mongosh", "--port", "27017", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 
@@ -51,6 +48,9 @@ services:
     restart: always
     ports:
       - "27018:27018"
+    depends_on:
+      configSrv:
+        condition: service_healthy
     networks:
       app-network:
         ipv4_address: 173.17.0.9
@@ -58,6 +58,7 @@ services:
       - shard1-data:/data/db
     command:
       [
+        "mongod",
         "--shardsvr",
         "--replSet",
         "shard1",
@@ -66,7 +67,7 @@ services:
         "27018"
       ]
     healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      test: [ "CMD", "mongosh", "--port", "27018", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 
@@ -76,6 +77,9 @@ services:
     restart: always
     ports:
       - "27019:27019"
+    depends_on:
+      configSrv:
+        condition: service_healthy
     networks:
       app-network:
         ipv4_address: 173.17.0.8
@@ -83,6 +87,7 @@ services:
       - shard2-data:/data/db
     command:
       [
+        "mongod",
         "--shardsvr",
         "--replSet",
         "shard2",
@@ -91,7 +96,7 @@ services:
         "27019"
       ]
     healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      test: [ "CMD", "mongosh", "--port", "27019", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 
@@ -101,6 +106,9 @@ services:
     restart: always
     ports:
       - "27020:27020"
+    depends_on:
+      configSrv:
+        condition: service_healthy
     networks:
       app-network:
         ipv4_address: 173.17.0.7
@@ -114,7 +122,7 @@ services:
         "27020"
       ]
     healthcheck:
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      test: [ "CMD", "mongosh", "--port", "27020", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       start_period: 10s
 

@@ -1,38 +1,34 @@
-# mongo-sharding
+# sharding-repl-cache
 
 ## Как запустить
 
-Запускаем компоненты mongodb и приложение, mongos_router будет unhealthy
+Запускаем компоненты mongodb и приложение, mongos_router будет unhealthy.
 
 ```shell
-docker compose up -d
+docker-compose up -d
 ```
 
-Выполняем инициализацию конфигурации mongodb
-
-```shell
-./scripts/mongo-init-config.sh
-```
-
-Выполняем инициализацию всех шардов mongodb
-
-```shell
-./scripts/mongo-init-shards.sh
-```
-
-Добавляем на роутер mongodb все шарды, 
-помечаем базу somedb для шардирования, 
+Выполняем инициализацию конфигурации, всех шардов mongodb
+Добавляем на роутер mongodb все шарды,
+помечаем базу somedb для шардирования,
 шардируем коллекцию helloDoc по полю name хэшированным способом,
 mongos_router должен стать healthy
 
 ```shell
-./scripts/mongo-init-router.sh
+./scripts/mongo-init.sh
 ```
 
 Заполняем коллекцию helloDoc данными
 
 ```shell
-./scripts/mongo-init-data.sh
+./scripts/mongo-data.sh
+```
+
+
+Для остановки контейнеров использовать скрипт
+
+```shell
+./scripts/stop.sh
 ```
 
 ## Как проверить

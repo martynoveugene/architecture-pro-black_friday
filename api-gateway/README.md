@@ -24,6 +24,18 @@ mongos_router должен стать healthy
 ./scripts/mongo-data.sh
 ```
 
+Регистрируем сервисы в Consul
+
+```shell
+./scripts/register-services.sh
+```
+
+Регистрируем маршрут в apisix
+
+```shell
+./scripts/register-services.sh
+```
+
 
 Для остановки контейнеров использовать скрипт
 

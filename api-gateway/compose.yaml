@@ -1,0 +1,365 @@
+name: api-gateway
+
+services:
+
+  #api gateway
+  apisix:
+    image: apache/apisix:3.9.0-debian
+    container_name: apisix
+    restart: always
+    volumes:
+      - ./apisix_conf/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    depends_on:
+      - etcd
+    ##network_mode: host
+    ports:
+      - "9180:9180/tcp"
+      - "9080:9080/tcp"
+      - "9091:9091/tcp"
+      - "9443:9443/tcp"
+      - "9092:9092/tcp"
+    networks:
+      - app-network
+
+  #база данных типа Key-value для APISIX
+  etcd:
+    image: bitnamilegacy/etcd:3.5.11
+    container_name: etcd
+    restart: always
+    volumes:
+      - etcd_data:/bitnami/etcd
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ENABLE_V2=true
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+    ports:
+      - "2379:2379/tcp"
+    networks:
+      - app-network
+
+  consul:
+    image: consul:1.15.1
+    container_name: consul
+    restart: always
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.3
+    ports:
+      - '8500:8500'
+    command: 'agent -server -bind=127.0.0.1 -bootstrap-expect=1 -node=agent-one -client 0.0.0.0 -log-level info -data-dir=/consul/data -enable-script-checks'
+
+
+  pymongo-api-1:
+    container_name: pymongo-api-1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      mongos_router:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    ports:
+      - 8081:8080
+    environment:
+      MONGODB_URL: "mongodb://mongos_router:27020"
+      MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://redis:6379"
+      PYTHONUNBUFFERED: "1"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.111
+
+  pymongo-api-2:
+    container_name: pymongo-api-2
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      mongos_router:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    ports:
+      - 8082:8080
+    environment:
+      MONGODB_URL: "mongodb://mongos_router:27020"
+      MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://redis:6379"
+      PYTHONUNBUFFERED: "1"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.112
+
+  configSrv:
+    image: mongo:latest
+    container_name: configSrv
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.10
+    volumes:
+      - config-data:/data/db
+    command:
+      [
+        "--configsvr",
+        "--replSet",
+        "config_server",
+        "--bind_ip_all",
+        "--port",
+        "27017"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27017", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+      retries: 20
+
+  mongos_router:
+    image: mongo:latest
+    container_name: mongos_router
+    restart: always
+    ports:
+      - "27020:27020"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.7
+    command:
+      [
+        "mongos",
+        "--configdb",
+        "config_server/configSrv:27017",
+        "--bind_ip_all",
+        "--port",
+        "27020"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27020", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  shard1-1:
+    image: mongo:latest
+    container_name: shard1-1
+    restart: always
+    stop_grace_period: 20s
+    ports:
+      - "27011:27011"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.11
+    volumes:
+      - shard1-1-data:/data/db
+    command:
+      [
+        "mongod",
+        "--shardsvr",
+        "--replSet",
+        "shard1",
+        "--bind_ip_all",
+        "--port",
+        "27011"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27011", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  shard1-2:
+    image: mongo:latest
+    container_name: shard1-2
+    restart: always
+    stop_grace_period: 20s
+    ports:
+      - "27012:27012"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.12
+    volumes:
+      - shard1-2-data:/data/db
+    command:
+      [
+        "mongod",
+        "--shardsvr",
+        "--replSet",
+        "shard1",
+        "--bind_ip_all",
+        "--port",
+        "27012"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27012", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  shard1-3:
+    image: mongo:latest
+    container_name: shard1-3
+    restart: always
+    stop_grace_period: 20s
+    ports:
+      - "27013:27013"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.13
+    volumes:
+      - shard1-3-data:/data/db
+    command:
+      [
+        "mongod",
+        "--shardsvr",
+        "--replSet",
+        "shard1",
+        "--bind_ip_all",
+        "--port",
+        "27013"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27013", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  shard2-1:
+    image: mongo:latest
+    container_name: shard2-1
+    restart: always
+    stop_grace_period: 20s
+    ports:
+      - "27021:27021"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.21
+    volumes:
+      - shard2-1-data:/data/db
+    command:
+      [
+        "mongod",
+        "--shardsvr",
+        "--replSet",
+        "shard2",
+        "--bind_ip_all",
+        "--port",
+        "27021"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27021", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  shard2-2:
+    image: mongo:latest
+    container_name: shard2-2
+    restart: always
+    stop_grace_period: 20s
+    ports:
+      - "27022:27022"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.22
+    volumes:
+      - shard2-2-data:/data/db
+    command:
+      [
+        "mongod",
+        "--shardsvr",
+        "--replSet",
+        "shard2",
+        "--bind_ip_all",
+        "--port",
+        "27022"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27022", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  shard2-3:
+    image: mongo:latest
+    container_name: shard2-3
+    restart: always
+    stop_grace_period: 20s
+    ports:
+      - "27023:27023"
+    depends_on:
+      configSrv:
+        condition: service_healthy
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.23
+    volumes:
+      - shard2-3-data:/data/db
+    command:
+      [
+        "mongod",
+        "--shardsvr",
+        "--replSet",
+        "shard2",
+        "--bind_ip_all",
+        "--port",
+        "27023"
+      ]
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "27023", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      start_period: 10s
+
+  redis:
+    image: "redis:latest"
+    container_name: redis
+    ports:
+      - "6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    networks:
+      app-network:
+        ipv4_address: 173.17.0.222
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 173.17.0.0/16
+
+volumes:
+  config-data: {}
+  shard1-1-data: {}
+  shard1-2-data: {}
+  shard1-3-data: {}
+  shard2-1-data: {}
+  shard2-2-data: {}
+  shard2-3-data: {}
+  redis_data: {}
+  etcd_data:
+    driver: local

@@ -1,3 +1,9 @@
+# Итоговая схема
+
+![Task6-api-gateway-CDN svg](Task6-api-gateway-CDN.drawio.svg)
+
+![Task6-api-gateway-CDN drawio](Task6-api-gateway-CDN.drawio)
+
 # pymongo-api
 
 ## Как запустить
